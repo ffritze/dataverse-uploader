@@ -444,7 +444,7 @@ public class DVUploader extends AbstractUploader {
     
     /**
      * Copied from: https://stackoverflow.com/questions/5294532/httpclient-upload-big-file-and-show-sent-bytes-number
-     * @author Florian Fritze
+     * @author https://stackoverflow.com/users/80714/chadwick
      *
      */
     public class FileBodyCounter extends FileBody {
