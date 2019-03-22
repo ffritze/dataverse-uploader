@@ -15,8 +15,10 @@
  ***************************************************************************** */
 package org.sead.uploader.dataverse;
 
+import java.io.File;
+import java.io.FilterOutputStream;
 import java.io.IOException;
-import java.net.URL;
+import java.io.OutputStream;
 import java.util.HashMap;
 import java.util.concurrent.TimeUnit;
 
@@ -28,6 +30,7 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.protocol.HttpClientContext;
 import org.apache.http.entity.mime.MultipartEntityBuilder;
 import org.apache.http.entity.mime.content.ContentBody;
+import org.apache.http.entity.mime.content.FileBody;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
@@ -329,8 +332,11 @@ public class DVUploader extends AbstractUploader {
                 ContentBody bin = file.getContentBody();
 
                 MultipartEntityBuilder meb = MultipartEntityBuilder.create();
-                meb.addPart("file", bin);
+                FileBodyCounter cbFile = new FileBodyCounter(new File(file.getAbsolutePath()));
+                meb.addPart("file", cbFile);
 
+                System.out.println("Bytes written: "+cbFile.getBytesWritten()+" of "+bin.getContentLength());
+                
                 HttpEntity reqEntity = meb.build();
                 httppost.setEntity(reqEntity);
 
@@ -343,6 +349,7 @@ public class DVUploader extends AbstractUploader {
                         res = EntityUtils.toString(resEntity);
                     }
                     if (status == 200) {
+                    	System.out.println("Bytes written: "+cbFile.getBytesWritten());
                         JSONObject checksum = (new JSONObject(res)).getJSONObject("data").getJSONArray("files")
                                 .getJSONObject(0).getJSONObject("dataFile").getJSONObject("checksum");
                         dataId = checksum.getString("type") + ":" + checksum.getString("value");
@@ -432,5 +439,33 @@ public class DVUploader extends AbstractUploader {
             println(e.getMessage());
         }
         return false;
+    }
+    
+    
+    /**
+     * Copied from: https://stackoverflow.com/questions/5294532/httpclient-upload-big-file-and-show-sent-bytes-number
+     * @author Florian Fritze
+     *
+     */
+    public class FileBodyCounter extends FileBody {
+        public FileBodyCounter(File file) {
+			super(file);
+		}
+
+		private volatile long byteCount;
+
+        public long getBytesWritten() {
+            return byteCount;
+        }
+
+        public void writeTo(OutputStream out) throws IOException {
+            super.writeTo(new FilterOutputStream(out) {
+                // Other write() methods omitted for brevity. Implement for better performance
+                public void write(int b) throws IOException {
+                    byteCount++;
+                    super.write(b);
+                }
+            });
+        }
     }
 }
